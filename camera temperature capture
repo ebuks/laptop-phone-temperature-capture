@@ -1,0 +1,101 @@
+import cv2
+import numpy as np
+import requests
+import json
+import time
+import threading
+
+class TemperatureDetector:
+    def __init__(self):
+        self.temperature = None
+
+    # Function to detect the temperature from a given image
+    def detect_temperature(self, image):
+        # Use image processing techniques to extract the temperature from the image
+        # Here is an example using color thresholding to detect a thermometer:
+        # Convert the image to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Apply Gaussian blur to reduce noise
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        # Apply binary threshold to isolate the thermometer
+        _, thresh = cv2.threshold(blur, 100, 255, cv2.THRESH_BINARY)
+        # Find contours in the thresholded image
+        contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Find the largest contour (the thermometer)
+        largest_contour = max(contours, key=cv2.contourArea)
+        # Find the bounding rectangle of the thermometer
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        # Crop the thermometer from the image
+        thermometer_roi = image[y:y + h, x:x + w]
+        # Convert the thermometer ROI to grayscale
+        thermometer_gray = cv2.cvtColor(thermometer_roi, cv2.COLOR_BGR2GRAY)
+        # Apply Otsu's thresholding to binarize the thermometer ROI
+        _, thermometer_thresh = cv2.threshold(thermometer_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # Find the contours in the binarized thermometer ROI
+        thermometer_contours, _ = cv2.findContours(thermometer_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Find the bounding rectangle of the largest contour (the temperature scale)
+        largest_thermometer_contour = max(thermometer_contours, key=cv2.contourArea)
+        thermometer_x, thermometer_y, thermometer_w, thermometer_h = cv2.boundingRect(largest_thermometer_contour)
+        # Crop the temperature scale from the thermometer ROI
+        temperature_scale_roi = thermometer_roi[thermometer_y:thermometer_y + thermometer_h, thermometer_x:thermometer_x + thermometer_w]
+        # Resize the temperature scale ROI to a fixed size
+        temperature_scale_roi = cv2.resize(temperature_scale_roi, (100, 600))
+        # Apply adaptive thresholding to binarize the temperature scale
+        temperature_scale_thresh = cv2.adaptiveThreshold(temperature_scale_roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+        # Find the contours in the binarized temperature scale
+        temperature_scale_contours, _ = cv2.findContours(temperature_scale_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Iterate through the contours to find the one with the highest y-coordinate (the top of the temperature scale)
+        top_contour = None
+        top_y = 0
+        for contour in temperature_scale_contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            if y > top_y:
+                top_contour = contour
+                top
+    # Compute the temperature from the y-coordinate of the top of the temperature scale
+    temperature = (top_y / temperature_scale_roi.shape[0]) * 100
+
+    # Update the temperature attribute of the TemperatureDetector object
+    self.temperature = temperature
+
+# Function to capture a frame from the video stream and detect the temperature
+def capture_frame(self):
+    # Open the default camera (index 0)
+    cap = cv2.VideoCapture(0)
+
+    while True:
+        # Capture a frame from the video stream
+        ret, frame = cap.read()
+
+        # If the frame was captured successfully, detect the temperature
+        if ret:
+            self.detect_temperature(frame)
+
+        # Wait for a key press to exit the loop
+        if cv2.waitKey(1) == ord('q'):
+            break
+
+    # Release the video capture object and close all windows
+    cap.release()
+    cv2.destroyAllWindows()
+
+# Function to start capturing frames and detecting temperatures in a separate thread
+def start(self):
+    # Create a new thread for capturing frames
+    t = threading.Thread(target=self.capture_frame)
+    # Set the thread as a daemon so it will be terminated when the main program ends
+    t.daemon = True
+    # Start the thread
+    t.start()
+
+    # Wait for the temperature to be detected at least once
+    while self.temperature is None:
+        time.sleep(0.1)
+
+    # Return the detected temperature
+    return self.temperature
+# Send a POST request to the hospital management system API endpoint
+response = requests.post('https://example.com/api/temperature', json=data)
+
+# Print the response status code and message
+print(f'Response: {response.status_code} {response.text}')
